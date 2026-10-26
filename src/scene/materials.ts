@@ -17,6 +17,7 @@ export const DESKTOP_PRESETS: Record<string, FinishPreset<DesktopFinish>> = {
   bamboo: { label: 'Bamboo', color: '#c99c62', finish: 'bamboo' },
   'dark-bamboo': { label: 'Carbonized bamboo', color: '#8a5d38', finish: 'bamboo' },
   walnut: { label: 'Walnut', color: '#6b4733', finish: 'wood' },
+  'dark-walnut': { label: 'Dark walnut', color: '#40291d', finish: 'wood' },
   oak: { label: 'Oak', color: '#b98c5f', finish: 'wood' },
   maple: { label: 'Maple', color: '#d7b98f', finish: 'wood' },
   rubberwood: { label: 'Rubberwood', color: '#c59b6e', finish: 'wood' },
@@ -170,15 +171,20 @@ function paintSurface(
   return canvas;
 }
 
-function woodShade(noise: ValueNoise) {
+/** `contrast` scales the figure; dark woods need more of it to read as wood rather than paint. */
+function woodShade(noise: ValueNoise, contrast: number) {
   return (x: number, y: number) => {
     // Growth rings along the length, bent by slow noise into cathedral patterns.
     const warp = noise.fbm(x / 55, y / 9, 3) * 7 + noise.fbm(x / 9, y / 2.5, 2) * 0.35;
     const ring = (y * 0.55 + warp) % 1;
+    // Each ring darkens toward its latewood edge, which ends in a fine dark line.
+    const band = ring * ring;
     const latewood = Math.pow(Math.max(0, Math.sin(ring * Math.PI)), 14);
+    // Long streaks along the board: the figure that still shows when the desk is small on screen.
+    const streak = noise.fbm(x / 70, y / 1.8, 3) - 0.5;
     const fibre = noise.noise(x * 1.6, y * 22) - 0.5;
     const mottle = noise.fbm(x / 30, y / 12, 2) - 0.5;
-    return 1.04 - latewood * 0.2 + fibre * 0.07 + mottle * 0.1;
+    return 1.08 + contrast * (-0.16 * band - 0.12 * latewood + 0.3 * streak + 0.06 * fibre + 0.1 * mottle);
   };
 }
 
@@ -211,8 +217,15 @@ export function desktopTexture(
   anisotropy: number,
 ): CanvasTexture {
   const noise = new ValueNoise(7);
+  const [r, g, b] = hexToRgb(color);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  const contrast = Math.min(1.7, Math.max(0.8, 1 + (0.45 - luminance) * 1.6));
   const shade =
-    finish === 'wood' ? woodShade(noise) : finish === 'bamboo' ? bambooShade(noise, 11) : laminateShade(noise);
+    finish === 'wood'
+      ? woodShade(noise, contrast)
+      : finish === 'bamboo'
+        ? bambooShade(noise, 11)
+        : laminateShade(noise);
   const texture = new CanvasTexture(paintSurface(color, widthCm, depthCm, shade));
   texture.colorSpace = SRGBColorSpace;
   texture.wrapS = RepeatWrapping;

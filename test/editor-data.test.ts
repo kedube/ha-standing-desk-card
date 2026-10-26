@@ -45,6 +45,12 @@ describe('editor data', () => {
     expect(frame.frame_finish).toBe('metallic');
   });
 
+  it('offers dark walnut as a wood-grain preset', () => {
+    const config = fromFormData(base, { ...toFormData(base), desktop_style: 'dark-walnut' });
+    expect(config.desktop_color).toBe('dark-walnut');
+    expect(toFormData(config)).toMatchObject({ desktop_style: 'dark-walnut', desktop_finish: 'wood' });
+  });
+
   it('keeps sizes written with units unless they are edited', () => {
     const config = { ...base, desktop_width: '160cm' };
     const data = toFormData(config);

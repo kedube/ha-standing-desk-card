@@ -61,7 +61,7 @@ With no `device`, the card uses the first DeskUp Pro it finds.
 | `presets` | `4` | Memory presets your controller supports: `2`, `3` or `4`. |
 | `name` | — | Title shown above the desk. |
 | `unit` | `auto` | `auto` (follows Home Assistant's unit system), `in` or `cm`. |
-| `desktop_color` | `bamboo` | `bamboo`, `dark-bamboo`, `walnut`, `oak`, `maple`, `rubberwood`, `cherry`, `white`, `gray`, `black`, or a hex color such as `"#2f5d50"`. |
+| `desktop_color` | `bamboo` | `bamboo`, `dark-bamboo`, `walnut`, `dark-walnut`, `oak`, `maple`, `rubberwood`, `cherry`, `white`, `gray`, `black`, or a hex color such as `"#2f5d50"`. |
 | `desktop_finish` | From the preset | Surface for hex colors: `laminate`, `wood` or `bamboo`. |
 | `desktop_width` | `60` | Width in inches, or with a unit: `"152cm"`. |
 | `desktop_depth` | `30` | Depth in inches, or with a unit. Depths under 27″ use UPLIFT's shorter feet. |
