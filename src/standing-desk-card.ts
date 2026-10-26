@@ -26,7 +26,7 @@ import {
   unitLabel,
 } from './units';
 
-const VERSION = '0.1.0';
+const VERSION = __CARD_VERSION__;
 export const CARD_TYPE = 'standing-desk-card';
 const EDITOR_TYPE = 'standing-desk-card-editor';
 const KEYPAD_TYPE = 'standing-desk-keypad';

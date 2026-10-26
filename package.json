@@ -1,6 +1,6 @@
 {
   "name": "ha-standing-desk-card",
-  "version": "0.1.0",
+  "private": true,
   "description": "Home Assistant card that renders a 3D UPLIFT V2-style standing desk and controls it through a DeskUp Pro ESPHome controller.",
   "type": "module",
   "license": "GPL-3.0-or-later",
@@ -19,6 +19,7 @@
     "three": "^0.186.1"
   },
   "devDependencies": {
+    "@types/node": "^24.19.2",
     "@types/three": "^0.186.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",

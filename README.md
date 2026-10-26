@@ -129,6 +129,10 @@ npm run build   # writes dist/standing-desk-card.js
 
 The dev page simulates the controller's entities and an UPLIFT V2's travel speed, so you can try every control without a desk.
 
+### Releasing
+
+Run the **Release** workflow from the Actions tab on `main`. It tests and builds the card, then publishes the next version with `standing-desk-card.js` attached. Versions count up in hundredths with no "v" prefix: 0.01, 0.02 … 0.99, then 1.00, 1.01 and so on.
+
 ## Credits
 
 The desk's dimensions come from UPLIFT's published V2 frame and keypad spec sheets. This project isn't affiliated with UPLIFT Desk or SmartHomeGuys, and it uses no UPLIFT artwork or logos.
