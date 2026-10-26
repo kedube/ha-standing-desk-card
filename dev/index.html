@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Standing Desk Card – dev</title>
+    <style>
+      :root {
+        --primary-color: #03a9f4;
+        --text-primary-color: #fff;
+        --primary-text-color: #212121;
+        --secondary-text-color: #727272;
+        --divider-color: rgba(0, 0, 0, 0.12);
+        --card-background-color: #fff;
+        --warning-color: #ffa600;
+        --error-color: #db4437;
+        --page: #f3f3f3;
+        color-scheme: light;
+      }
+      :root[data-theme='dark'] {
+        --primary-text-color: #e1e1e1;
+        --secondary-text-color: #9b9b9b;
+        --divider-color: rgba(225, 225, 225, 0.12);
+        --card-background-color: #1c1c1c;
+        --page: #111111;
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--page);
+        color: var(--primary-text-color);
+        font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      ha-card {
+        display: block;
+        background: var(--card-background-color);
+        border-radius: 12px;
+        border: 1px solid var(--divider-color);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+      }
+      #controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin-bottom: 16px;
+        font-size: 13px;
+      }
+      #controls label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      [data-card='wide'] {
+        width: 520px;
+      }
+      [data-card='narrow'] {
+        width: 340px;
+      }
+    </style>
+    <script type="module" src="./main.ts"></script>
+  </head>
+  <body>
+    <form id="controls" onsubmit="return false">
+      <label>Title <input name="name" value="" size="10" /></label>
+      <label
+        >Presets
+        <select name="presets">
+          <option>2</option>
+          <option>3</option>
+          <option selected>4</option>
+        </select></label
+      >
+      <label
+        >Units
+        <select name="unit">
+          <option value="auto">auto (in)</option>
+          <option value="in">in</option>
+          <option value="cm">cm</option>
+        </select></label
+      >
+      <label
+        >Desktop
+        <select name="desktop_color">
+          <option>bamboo</option>
+          <option>dark-bamboo</option>
+          <option>walnut</option>
+          <option>oak</option>
+          <option>maple</option>
+          <option>rubberwood</option>
+          <option>cherry</option>
+          <option>white</option>
+          <option>gray</option>
+          <option>black</option>
+          <option>#2f5d50</option>
+        </select></label
+      >
+      <label
+        >Frame
+        <select name="frame_color">
+          <option>black</option>
+          <option>white</option>
+          <option>gray</option>
+          <option>industrial</option>
+          <option>#7a2e2e</option>
+        </select></label
+      >
+      <label
+        >Keypad
+        <select name="keypad_color">
+          <option>black</option>
+          <option>white</option>
+          <option>gray</option>
+        </select></label
+      >
+      <label
+        >Side
+        <select name="keypad_side">
+          <option>right</option>
+          <option>left</option>
+        </select></label
+      >
+      <label>Width (in) <input name="desktop_width" type="number" value="60" min="42" max="80" style="width: 4em" /></label>
+      <label
+        >Theme
+        <select name="theme">
+          <option>light</option>
+          <option>dark</option>
+        </select></label
+      >
+      <label><input type="checkbox" name="show_scale" checked /> Scale</label>
+      <label><input type="checkbox" name="show_idle" /> Idle time</label>
+      <label><input type="checkbox" name="offline" /> Unavailable</label>
+    </form>
+    <div class="cards">
+      <div data-card="wide"></div>
+      <div data-card="narrow"></div>
+    </div>
+  </body>
+</html>

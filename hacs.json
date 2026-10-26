@@ -1,0 +1,6 @@
+{
+  "name": "Standing Desk Card",
+  "filename": "standing-desk-card.js",
+  "render_readme": true,
+  "homeassistant": "2024.1.0"
+}
