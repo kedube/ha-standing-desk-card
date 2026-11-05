@@ -1,5 +1,10 @@
 # Standing Desk Card
 
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+[![Latest release](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fgithub.com%2Fkedube%2Fha-standing-desk-card%2Freleases.atom&query=%2F%2F%2A%5Blocal-name%28%29%3D%27entry%27%5D%5B1%5D%2F%2A%5Blocal-name%28%29%3D%27title%27%5D&label=release&color=blue)](https://github.com/kedube/ha-standing-desk-card/releases/latest)
+[![Release workflow](https://github.com/kedube/ha-standing-desk-card/actions/workflows/release.yml/badge.svg)](https://github.com/kedube/ha-standing-desk-card/actions/workflows/release.yml)
+[![License: GPL-3.0](https://img.shields.io/github/license/kedube/ha-standing-desk-card)](LICENSE)
+
 A Home Assistant dashboard card that shows your standing desk as a real-time 3D model and controls it through a [DeskUp Pro (RJ12) ESPHome controller](https://github.com/kedube/DeskUp-Pro-Controller-RJ12). The model follows the UPLIFT V2 2-leg frame, and the controls work like the UPLIFT Advanced keypad.
 
 <p align="center">
@@ -30,11 +35,28 @@ A Home Assistant dashboard card that shows your standing desk as a real-time 3D 
 
 ## Installation
 
-### HACS
+### Marketplace or HACS (recommended)
 
-1. In HACS, open the menu (⋮) and choose **Custom repositories**.
-2. Add `https://github.com/kedube/ha-standing-desk-card` with the type **Dashboard**.
-3. Install **Standing Desk Card**, then reload your browser.
+Home Assistant 2026.11 replaced HACS with its built-in **Marketplace**. This card isn't in the Marketplace catalog or the HACS default store, so add it as a custom repository. The quickest way is this button, which opens it in the Marketplace (in HACS before 2026.11):
+
+[![Open your Home Assistant instance and open this repository in the Marketplace or HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kedube&repository=ha-standing-desk-card&category=plugin)
+
+Or add it by hand. On Home Assistant 2026.11 or later:
+
+1. Go to **Settings → Marketplace** and select **Add from link** (top right).
+2. Under **GitHub link**, enter `https://github.com/kedube/ha-standing-desk-card` and select **Add**. The first time, the Marketplace asks you to connect GitHub, which it needs for custom repositories. If it asks for a **Type**, choose **Dashboard**.
+3. Open **Standing Desk Card** and select **Install**, then **Install** again to confirm.
+4. Reload the browser. If a repair asks you to restart Home Assistant first, do that.
+
+On older versions, with HACS:
+
+1. Open **HACS**, open the **⋮** menu, choose **Custom repositories**, and add `https://github.com/kedube/ha-standing-desk-card` with the type **Dashboard**.
+2. Search for **Standing Desk Card** and select **Download**.
+3. Reload the browser.
+
+Both register the dashboard resource for you and offer each new release as an update. If you manage dashboard resources in YAML, add the resource yourself; the Marketplace's install dialog shows the one you need. In the companion app, clear the frontend cache from **Settings → Companion app → Debugging** to load the card.
+
+Installed it with HACS already? Updating Home Assistant to 2026.11 moves it to the Marketplace by itself: it stays installed and keeps getting updates.
 
 ### Manual
 
