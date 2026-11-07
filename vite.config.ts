@@ -21,12 +21,16 @@ export default defineConfig({
     minify: true,
     // three.js makes the single bundle ~650 kB (~170 kB gzipped); that's expected.
     chunkSizeWarningLimit: 900,
+    // The full licence text of every bundled library, attached to each release.
+    license: { fileName: 'THIRD-PARTY-LICENSES.md' },
     rolldownOptions: {
       input: 'src/standing-desk-card.ts',
       preserveEntrySignatures: 'allow-extension',
       output: {
         format: 'es',
         entryFileNames: 'standing-desk-card.js',
+        // Keep the @license notices of the bundled three.js (MIT) and Lit (BSD).
+        comments: { legal: true },
       },
     },
   },

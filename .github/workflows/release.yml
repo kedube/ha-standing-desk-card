@@ -2,7 +2,8 @@ name: Release
 
 # Run from the Actions tab ("Run workflow"). Each run publishes the next version after the
 # highest existing release tag: 0.01, 0.02 … 0.99, then 1.00, 1.01 … with no "v" prefix.
-# The release carries standing-desk-card.js, which is the file HACS downloads.
+# The release carries standing-desk-card.js, the file dashboards load, and the licences of the
+# libraries bundled into it. HACS downloads both.
 on:
   workflow_dispatch:
 
@@ -47,7 +48,7 @@ jobs:
         env:
           CARD_VERSION: ${{ steps.version.outputs.version }}
       - name: Publish the release
-        run: gh release create "$VERSION" dist/standing-desk-card.js --title "$VERSION" --target "$GITHUB_SHA" --generate-notes
+        run: gh release create "$VERSION" dist/standing-desk-card.js dist/THIRD-PARTY-LICENSES.md --title "$VERSION" --target "$GITHUB_SHA" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}

@@ -153,7 +153,7 @@ The dev page simulates the controller's entities and an UPLIFT V2's travel speed
 
 ### Releasing
 
-Run the **Release** workflow from the Actions tab on `main`. It runs the HACS validation, tests and builds the card, then publishes the next version with `standing-desk-card.js` attached. Versions count up in hundredths with no "v" prefix: 0.01, 0.02 … 0.99, then 1.00, 1.01 and so on.
+Run the **Release** workflow from the Actions tab on `main`. It runs the HACS validation, tests and builds the card, then publishes the next version with `standing-desk-card.js` and `THIRD-PARTY-LICENSES.md` attached. Versions count up in hundredths with no "v" prefix: 0.01, 0.02 … 0.99, then 1.00, 1.01 and so on.
 
 ## Credits
 
@@ -162,3 +162,5 @@ The desk's dimensions come from UPLIFT's published V2 frame and keypad spec shee
 ## License
 
 [GPL-3.0](LICENSE)
+
+The release file bundles three.js (MIT) and Lit (BSD-3-Clause). Their full licences are in `THIRD-PARTY-LICENSES.md`, attached to each release.
