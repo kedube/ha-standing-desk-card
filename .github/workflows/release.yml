@@ -14,7 +14,20 @@ concurrency:
   group: release
 
 jobs:
+  # The HACS catalog requires a release made after validation passes. Empty permissions keep
+  # this third-party action from inheriting the workflow's write access.
+  hacs:
+    name: HACS
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: plugin
+
   release:
+    needs: hacs
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

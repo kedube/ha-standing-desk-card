@@ -153,7 +153,7 @@ The dev page simulates the controller's entities and an UPLIFT V2's travel speed
 
 ### Releasing
 
-Run the **Release** workflow from the Actions tab on `main`. It tests and builds the card, then publishes the next version with `standing-desk-card.js` attached. Versions count up in hundredths with no "v" prefix: 0.01, 0.02 … 0.99, then 1.00, 1.01 and so on.
+Run the **Release** workflow from the Actions tab on `main`. It runs the HACS validation, tests and builds the card, then publishes the next version with `standing-desk-card.js` attached. Versions count up in hundredths with no "v" prefix: 0.01, 0.02 … 0.99, then 1.00, 1.01 and so on.
 
 ## Credits
 

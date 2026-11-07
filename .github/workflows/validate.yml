@@ -1,0 +1,23 @@
+name: Validate
+
+# Runs the HACS action, the same validation that reviews a hacs/default catalog submission.
+# The catalog doesn't accept ignored checks, so don't set `ignore`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 0 * * *" # catches new HACS rules and repository setting changes between pushes
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  hacs:
+    name: HACS
+    runs-on: ubuntu-latest
+    steps:
+      # @main matches the catalog's own check. HACS's newest version tag is from 2022.
+      - uses: hacs/action@main
+        with:
+          category: plugin
