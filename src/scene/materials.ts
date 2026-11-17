@@ -72,20 +72,22 @@ function resolveFinish<F>(
   presets: Record<string, FinishPreset<F>>,
   fallbackPreset: string,
   fallbackFinish: F,
-  color?: string,
+  color?: unknown,
   finish?: F,
 ): { color: string; finish: F } {
-  const preset = color ? presets[color.trim().toLowerCase()] : undefined;
+  // YAML turns an unquoted 202020 into a number; anything that isn't a string falls back.
+  const key = typeof color === 'string' ? color.trim().toLowerCase() : '';
+  const preset = Object.prototype.hasOwnProperty.call(presets, key) ? presets[key] : undefined;
   if (preset) return { color: preset.color, finish: finish ?? preset.finish };
   if (isHexColor(color)) return { color: normalizeHex(color), finish: finish ?? fallbackFinish };
   const base = presets[fallbackPreset];
   return { color: base.color, finish: finish ?? base.finish };
 }
 
-export const resolveDesktop = (color?: string, finish?: DesktopFinish) =>
+export const resolveDesktop = (color?: unknown, finish?: DesktopFinish) =>
   resolveFinish(DESKTOP_PRESETS, DEFAULT_DESKTOP, 'laminate', color, finish);
 
-export const resolveFrame = (color?: string, finish?: FrameFinish) =>
+export const resolveFrame = (color?: unknown, finish?: FrameFinish) =>
   resolveFinish(FRAME_PRESETS, DEFAULT_FRAME, 'powder', color, finish);
 
 // --- Procedural surface textures -------------------------------------------------------
@@ -141,6 +143,23 @@ class ValueNoise {
 
 const TEX_W = 1024;
 const TEX_H = 512;
+
+/**
+ * Painted surfaces by look and size. Painting runs on the main thread (wood grain takes tens
+ * of milliseconds, more on wall tablets), and the model is rebuilt for changes that don't
+ * affect the surface, such as the height range or the theme's accent color.
+ */
+const surfaceCache = new Map<string, HTMLCanvasElement>();
+const SURFACE_CACHE_SIZE = 4;
+
+function cachedSurface(key: string, paint: () => HTMLCanvasElement): HTMLCanvasElement {
+  const cached = surfaceCache.get(key);
+  surfaceCache.delete(key);
+  const canvas = cached ?? paint();
+  surfaceCache.set(key, canvas); // most recently used last
+  if (surfaceCache.size > SURFACE_CACHE_SIZE) surfaceCache.delete(surfaceCache.keys().next().value!);
+  return canvas;
+}
 
 /** Paints `shade(x, y) → brightness multiplier` over a base color; x/y are in cm across the desktop. */
 function paintSurface(
@@ -216,17 +235,20 @@ export function desktopTexture(
   depthCm: number,
   anisotropy: number,
 ): CanvasTexture {
-  const noise = new ValueNoise(7);
-  const [r, g, b] = hexToRgb(color);
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  const contrast = Math.min(1.7, Math.max(0.8, 1 + (0.45 - luminance) * 1.6));
-  const shade =
-    finish === 'wood'
-      ? woodShade(noise, contrast)
-      : finish === 'bamboo'
-        ? bambooShade(noise, 11)
-        : laminateShade(noise);
-  const texture = new CanvasTexture(paintSurface(color, widthCm, depthCm, shade));
+  const surface = cachedSurface(`${color}|${finish}|${widthCm}|${depthCm}`, () => {
+    const noise = new ValueNoise(7);
+    const [r, g, b] = hexToRgb(color);
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    const contrast = Math.min(1.7, Math.max(0.8, 1 + (0.45 - luminance) * 1.6));
+    const shade =
+      finish === 'wood'
+        ? woodShade(noise, contrast)
+        : finish === 'bamboo'
+          ? bambooShade(noise, 11)
+          : laminateShade(noise);
+    return paintSurface(color, widthCm, depthCm, shade);
+  });
+  const texture = new CanvasTexture(surface);
   texture.colorSpace = SRGBColorSpace;
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;

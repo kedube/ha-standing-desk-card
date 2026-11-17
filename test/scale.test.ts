@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scaleTicks, spreadMarkers } from '../src/scale';
+import { FALLBACK_RANGE, heightRange, scaleTicks, spreadMarkers } from '../src/scale';
 import { CM_PER_IN } from '../src/units';
 
 // A linear projection: `pxPerCm` pixels per centimetre, higher heights nearer the top.
@@ -25,6 +25,31 @@ describe('scale ticks', () => {
     const ticks = scaleTicks(64, 129, 'cm', linear(3));
     expect(ticks[0].value).toBe(64);
     expect(ticks.filter((t) => t.major).map((t) => t.value)).toEqual([70, 80, 90, 100, 110, 120]);
+  });
+
+  it('draws no ticks for a nonsense range instead of hanging the page', () => {
+    expect(scaleTicks(60, 1e9, 'cm', linear(1e-6))).toEqual([]);
+    expect(scaleTicks(60, Infinity, 'cm', linear(1))).toEqual([]);
+  });
+});
+
+describe('height range', () => {
+  it("uses the controller's Min/Max Height", () => {
+    expect(heightRange(64.3, 129.3, NaN, NaN)).toEqual({ min: 64.3, max: 129.3 });
+  });
+
+  it("stays within the height number's own limits, which Home Assistant enforces", () => {
+    expect(heightRange(50, 140, 58, 131)).toEqual({ min: 58, max: 131 });
+  });
+
+  it('ignores missing or implausible readings', () => {
+    expect(heightRange(0, NaN, 58, 131)).toEqual({ min: 58, max: 131 });
+    expect(heightRange(0, 1e9, NaN, NaN)).toEqual(FALLBACK_RANGE);
+    expect(heightRange(70, 1e9, 0, 0)).toEqual({ min: 70, max: FALLBACK_RANGE.max });
+  });
+
+  it('falls back to the V2 range when the range is too narrow', () => {
+    expect(heightRange(100, 102, NaN, NaN)).toEqual(FALLBACK_RANGE);
   });
 });
 

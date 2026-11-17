@@ -1,4 +1,5 @@
 import { LitElement, css, html, nothing, svg } from 'lit';
+import type { PropertyValues } from 'lit';
 import { CELL_HEIGHT, CELL_WIDTH, DOT, SEGMENT_NAMES, displayCells, segmentPolygon } from './seven-segment';
 import type { Direction } from './keypad-controller';
 import type { KeypadColor } from './types';
@@ -32,6 +33,8 @@ export class StandingDeskKeypad extends LitElement {
   declare label: string;
 
   private activePointer?: number;
+  /** True while ▲/▼ is held with Enter or Space. */
+  private keyHold = false;
 
   constructor() {
     super();
@@ -43,6 +46,11 @@ export class StandingDeskKeypad extends LitElement {
     this.held = null;
     this.disabled = false;
     this.label = '';
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    // A disabled button may never see the pointerup or keyup that would end a hold.
+    if (changed.has('disabled') && this.disabled) this.releaseAll();
   }
 
   protected override render() {
@@ -112,6 +120,7 @@ export class StandingDeskKeypad extends LitElement {
       @lostpointercapture=${this.onArrowUp}
       @keydown=${(ev: KeyboardEvent) => this.onArrowKey(ev, direction, true)}
       @keyup=${(ev: KeyboardEvent) => this.onArrowKey(ev, direction, false)}
+      @blur=${this.onArrowBlur}
       @contextmenu=${(ev: Event) => ev.preventDefault()}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d=${path} /></svg>
@@ -136,13 +145,25 @@ export class StandingDeskKeypad extends LitElement {
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     ev.preventDefault();
     if (pressed && ev.repeat) return;
+    this.keyHold = pressed;
     this.emitHold(direction, pressed);
   }
 
-  /** Called by the card when the page is hidden mid-hold. */
+  /**
+   * The keyup that ends a keyboard hold goes wherever focus is, so a hold would never end if
+   * focus moved first (Tab, a click elsewhere, or switching apps, which also blurs the button).
+   */
+  private readonly onArrowBlur = (): void => {
+    if (!this.keyHold) return;
+    this.keyHold = false;
+    this.emitHold(null, false);
+  };
+
+  /** Ends any hold: called when the page is hidden or loses focus, or the keypad is disabled. */
   releaseAll(): void {
-    if (this.activePointer === undefined) return;
+    if (this.activePointer === undefined && !this.keyHold) return;
     this.activePointer = undefined;
+    this.keyHold = false;
     this.emitHold(null, false);
   }
 

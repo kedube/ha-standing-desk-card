@@ -58,4 +58,14 @@ describe('editor data', () => {
     expect(fromFormData(config, data).desktop_width).toBe('160cm');
     expect(fromFormData(config, { ...data, desktop_width: 72 }).desktop_width).toBe(72);
   });
+
+  it("doesn't throw on a color YAML read as a number", () => {
+    const config = { ...base, desktop_color: 202020, frame_color: 101010 } as unknown as StandingDeskCardConfig;
+    expect(toFormData(config)).toMatchObject({ desktop_style: 'bamboo', frame_style: 'black' });
+  });
+
+  it('reads on/off options written as strings', () => {
+    const config = { ...base, allow_preset_save: 'no', show_idle: 'yes' } as unknown as StandingDeskCardConfig;
+    expect(toFormData(config)).toMatchObject({ allow_preset_save: false, show_idle: true });
+  });
 });

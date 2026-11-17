@@ -26,7 +26,9 @@ export interface KeypadOptions {
 export const DEFAULT_KEYPAD_OPTIONS: KeypadOptions = {
   holdDelayMs: 400,
   repeatMs: 250,
-  maxHoldMs: 60_000,
+  // A little over the V2's full travel (25.6″ at 1.57″/s ≈ 16 s), so a hold whose release
+  // never arrives can't keep the desk moving for long.
+  maxHoldMs: 20_000,
   saveWindowMs: 4_000,
   savedFlashMs: 1_500,
   manualGraceMs: 1_500,
@@ -84,6 +86,8 @@ export class KeypadController {
 
   pressDirection(direction: Direction): void {
     if (this.holding) return;
+    // A new press means any release still owed to an earlier stop-press was lost.
+    this.swallowRelease = false;
     this.disarm();
     if (this.isAutoMoving()) {
       this.actions.stop();
@@ -112,8 +116,9 @@ export class KeypadController {
   pressPreset(preset: number): void {
     if (this._saveArmed) {
       this._saveArmed = false;
-      this.actions.savePreset(preset);
+      // Flash first, so an action that fails straight away can dismiss it.
       this.flash(`S-${preset}`, this.options.savedFlashMs);
+      this.actions.savePreset(preset);
       return;
     }
     if (this.isAutoMoving()) {
@@ -140,9 +145,18 @@ export class KeypadController {
     });
   }
 
+  /** Clears `text` from the display if it is still showing, e.g. "S-2" after the save failed. */
+  dismiss(text: string): void {
+    if (this._message === text) this.disarm();
+  }
+
+  /** Resets everything, so a card that is re-attached later starts from a clean keypad. */
   dispose(): void {
     this.clearHold();
     clearTimeout(this.displayTimer);
+    this.swallowRelease = false;
+    this._saveArmed = false;
+    this._message = null;
   }
 
   private nudge(direction: Direction): void {

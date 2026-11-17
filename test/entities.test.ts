@@ -101,6 +101,14 @@ describe('entity discovery', () => {
     expect(entities.stop).toBe('script.stop_desk');
   });
 
+  it('ignores overrides named after inherited object properties', () => {
+    const hass = makeHass({ desk: deskIds('deskup_pro_controller') });
+    const overrides = { toString: 'button.x', constructor: 'button.y' } as unknown as StandingDeskCardConfig['entities'];
+    const { entities } = resolveEntities(hass, config({ entities: overrides }));
+    expect(Object.keys(entities)).not.toContain('toString');
+    expect(Object.keys(entities)).not.toContain('constructor');
+  });
+
   it('only requires as many presets as the controller has', () => {
     const ids = deskIds('desk').filter((id) => !/_m[34]($|_)/.test(id));
     const map = mapEntityIds(ids);

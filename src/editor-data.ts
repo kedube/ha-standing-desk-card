@@ -1,6 +1,6 @@
 import { DESKTOP_PRESETS, FRAME_PRESETS, hexToRgb, isHexColor, resolveDesktop, resolveFrame } from './scene/materials';
 import type { StandingDeskCardConfig } from './types';
-import { CM_PER_IN, parseLength } from './units';
+import { CM_PER_IN, parseFlag, parseLength } from './units';
 
 /** Flat view of the config for ha-form; style/rgb pairs stand in for desktop_color / frame_color. */
 export interface FormData {
@@ -34,10 +34,10 @@ export function rgbToHex(rgb: unknown): string | undefined {
   return `#${rgb.map((c) => Math.max(0, Math.min(255, Math.round(Number(c) || 0))).toString(16).padStart(2, '0')).join('')}`;
 }
 
-function styleOf(presets: Record<string, unknown>, color: string | undefined, fallback: string): string {
-  if (!color) return fallback;
+function styleOf(presets: Record<string, unknown>, color: unknown, fallback: string): string {
+  if (typeof color !== 'string' || !color) return fallback;
   const key = color.trim().toLowerCase();
-  if (key in presets) return key;
+  if (Object.prototype.hasOwnProperty.call(presets, key)) return key;
   return isHexColor(color) ? 'custom' : fallback;
 }
 
@@ -64,9 +64,9 @@ export function toFormData(config: StandingDeskCardConfig): FormData {
     frame_finish: frame.finish,
     keypad_color: config.keypad_color ?? 'black',
     keypad_side: config.keypad_side ?? 'right',
-    show_scale: config.show_scale !== false,
-    show_idle: config.show_idle === true,
-    allow_preset_save: config.allow_preset_save !== false,
+    show_scale: parseFlag(config.show_scale, true),
+    show_idle: parseFlag(config.show_idle, false),
+    allow_preset_save: parseFlag(config.allow_preset_save, true),
     hold_repeat_ms: config.hold_repeat_ms ?? 250,
   };
 }

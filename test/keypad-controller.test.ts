@@ -106,4 +106,58 @@ describe('keypad', () => {
     keypad.pressPreset(2);
     expect(calls.at(-1)).toBe('stop');
   });
+
+  it('ends a hold whose release never arrives after 20 s by default', () => {
+    const { keypad, calls } = setup();
+    keypad.pressDirection('up');
+    vi.advanceTimersByTime(21_000);
+    expect(calls.at(-1)).toBe('stop');
+    expect(keypad.heldDirection).toBeNull();
+  });
+
+  it('forgets an armed save when the card is detached, so a memory key recalls', () => {
+    const { keypad, calls } = setup();
+    keypad.pressMemory();
+    keypad.dispose();
+    vi.advanceTimersByTime(60_000);
+    expect(keypad.message).toBeNull();
+    keypad.pressPreset(2);
+    expect(calls).toEqual(['goto:2']);
+  });
+
+  it("doesn't let a release lost after a stop-press swallow the next tap's release", () => {
+    const { keypad, calls } = setup();
+    let moving = true;
+    keypad.isDeskMoving = () => moving;
+    keypad.pressDirection('up'); // stops the desk; this press's release never arrives
+    moving = false;
+    vi.advanceTimersByTime(5000);
+    keypad.pressDirection('up');
+    keypad.releaseDirection();
+    vi.advanceTimersByTime(10_000);
+    expect(calls).toEqual(['stop', 'nudge:up']);
+    expect(keypad.heldDirection).toBeNull();
+  });
+
+  it('takes S-n off the display when the save fails', () => {
+    const keypad: KeypadController = new KeypadController({
+      nudge: () => {},
+      stop: () => {},
+      gotoPreset: () => {},
+      savePreset: (preset) => keypad.dismiss(`S-${preset}`),
+    });
+    keypad.pressMemory();
+    keypad.pressPreset(2);
+    expect(keypad.message).toBeNull();
+  });
+
+  it('only dismisses the message it was asked to', () => {
+    const { keypad } = setup();
+    keypad.pressMemory();
+    keypad.pressPreset(1);
+    keypad.pressMemory();
+    keypad.dismiss('S-1'); // a late failure from the first save
+    expect(keypad.message).toBe('S-');
+    expect(keypad.saveArmed).toBe(true);
+  });
 });

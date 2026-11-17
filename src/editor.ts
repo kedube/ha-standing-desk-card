@@ -152,14 +152,26 @@ async function loadHaForm(): Promise<void> {
   await card?.constructor.getConfigElement?.();
 }
 
+/** How long to wait for ha-form before telling the user to use the code editor. */
+const FORM_TIMEOUT_MS = 10_000;
+
 export class StandingDeskCardEditor extends LitElement {
   static override properties = {
     hass: { attribute: false },
     _config: { state: true },
+    _formMissing: { state: true },
   };
 
   declare hass?: HomeAssistant;
   declare _config?: StandingDeskCardConfig;
+  declare _formMissing: boolean;
+
+  private formTimer?: ReturnType<typeof setTimeout>;
+
+  constructor() {
+    super();
+    this._formMissing = false;
+  }
 
   setConfig(config: StandingDeskCardConfig): void {
     this._config = config;
@@ -167,13 +179,29 @@ export class StandingDeskCardEditor extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (!customElements.get('ha-form')) {
-      void loadHaForm();
-      void customElements.whenDefined('ha-form').then(() => this.requestUpdate());
-    }
+    if (customElements.get('ha-form')) return;
+    loadHaForm().catch((error: unknown) => console.warn('standing-desk-card: could not load the visual editor', error));
+    // whenDefined never rejects; it just never settles if ha-form doesn't arrive, hence the timer.
+    void customElements.whenDefined('ha-form').then(() => {
+      clearTimeout(this.formTimer);
+      this._formMissing = false;
+      this.requestUpdate();
+    });
+    clearTimeout(this.formTimer);
+    this.formTimer = setTimeout(() => (this._formMissing = !customElements.get('ha-form')), FORM_TIMEOUT_MS);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    clearTimeout(this.formTimer);
   }
 
   protected override render() {
+    if (this._formMissing) {
+      return html`<div class="missing">
+        The visual editor couldn't load. Use <strong>Show code editor</strong> to edit this card in YAML.
+      </div>`;
+    }
     if (!this.hass || !this._config) return nothing;
     const data = toFormData(this._config);
     return html`<ha-form
@@ -197,6 +225,10 @@ export class StandingDeskCardEditor extends LitElement {
   static override styles = css`
     :host {
       display: block;
+    }
+    .missing {
+      color: var(--secondary-text-color);
+      line-height: 1.4;
     }
   `;
 }

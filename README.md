@@ -91,12 +91,12 @@ With no `device`, the card uses the first DeskUp Pro it finds.
 | `presets` | `4` | Memory presets your controller supports: `2`, `3` or `4`. |
 | `name` | — | Title shown above the desk. |
 | `unit` | `auto` | `auto` (follows Home Assistant's unit system), `in` or `cm`. |
-| `desktop_color` | `bamboo` | `bamboo`, `dark-bamboo`, `walnut`, `dark-walnut`, `oak`, `maple`, `rubberwood`, `cherry`, `white`, `gray`, `black`, or a hex color such as `"#2f5d50"`. |
+| `desktop_color` | `bamboo` | `bamboo`, `dark-bamboo`, `walnut`, `dark-walnut`, `oak`, `maple`, `rubberwood`, `cherry`, `white`, `gray`, `black`, or a hex color in quotes, such as `"#2f5d50"`. Without quotes, YAML reads `#` as the start of a comment and the card shows an error. |
 | `desktop_finish` | From the preset | Surface for hex colors: `laminate`, `wood` or `bamboo`. |
 | `desktop_width` | `60` | Width in inches, or with a unit: `"152cm"`. |
 | `desktop_depth` | `30` | Depth in inches, or with a unit. Depths under 27″ use UPLIFT's shorter feet. |
 | `desktop_thickness` | `1` | Thickness in inches, or with a unit. |
-| `frame_color` | `black` | `black`, `white`, `gray`, `industrial`, or a hex color. |
+| `frame_color` | `black` | `black`, `white`, `gray`, `industrial`, or a hex color in quotes. |
 | `frame_finish` | From the preset | `powder` (powder coat) or `metallic`. |
 | `keypad_color` | `black` | `black`, `white` or `gray`. |
 | `keypad_side` | `right` | Which end of the desk the keypad is mounted on. |
@@ -134,17 +134,17 @@ entities:
 | Control | What it does |
 | --- | --- |
 | ▲ / ▼ tap | Nudges the desk (about 1 cm). |
-| ▲ / ▼ hold | Keeps sending nudges, then Stop when you let go. If the connection drops mid-hold, the nudges stop arriving and the desk stops by itself. |
+| ▲ / ▼ hold | Keeps sending nudges, then Stop when you let go. If the connection drops mid-hold, the nudges stop arriving and the desk stops by itself. A hold also ends if the desk goes offline, the browser window loses focus, or it lasts 20 seconds. |
 | 1–4 | Moves to that memory preset. |
 | M, then 1–4 | Saves the current height to that preset (within 4 seconds). The display shows `S-` and then `S-1`, like the real keypad. |
 | Any key while the desk is moving to a preset or target | Stops the desk. |
 | Tap the display | Type a height and press **Go**. |
-| Drag (or tap) the height scale | Pick a height. An outline shows where the desktop will stop, and the desk moves when you let go. With the keyboard, focus the scale, use the arrow keys, Page Up/Down or Home/End, then press Enter. |
+| Drag (or tap) the height scale | Pick a height. An outline shows where the desktop will stop, and the desk moves when you let go. With the keyboard, focus the scale, use the arrow keys, Page Up/Down or Home/End (lowest/highest), then press Enter. |
 | Numbered markers on the scale | Show where your presets are. Tap one to go there. |
 
 ## Tips
 
-- **Set the travel range.** The scale runs between the controller's **Min Height** and **Max Height** settings. For an UPLIFT V2 with a 1″ desktop, the physical range is 25.3–50.9″ (64.3–129.3 cm).
+- **Set the travel range.** The scale runs between the controller's **Min Height** and **Max Height** settings, kept within the Desk Height number's own limits (Home Assistant rejects heights outside them). For an UPLIFT V2 with a 1″ desktop, the physical range is 25.3–50.9″ (64.3–129.3 cm).
 - **Presets only nudge the desk?** UPLIFT control boxes can be set to Constant-Touch memory mode, where a preset only moves the desk while the button is held. Switch to One-Touch mode using UPLIFT's [control box programming guide](https://checkout.upliftdesk.com/content/Programming-UPLIFT-Control-Box-R01.pdf).
 - **Height off by a millimetre or two?** Adjust **Offset Up by** and **Offset Down by** in the controller's configuration.
 

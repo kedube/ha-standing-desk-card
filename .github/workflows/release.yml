@@ -35,6 +35,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # all tags, to find the latest release number
+          # Don't leave this job's write token in .git/config, where dependency code run by
+          # npm ci, the tests and the build could read it. gh gets its own token below.
+          persist-credentials: false
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -42,7 +45,8 @@ jobs:
       - name: Pick the next version
         id: version
         run: echo "version=$(node scripts/next-version.ts $(git tag --list))" >> "$GITHUB_OUTPUT"
-      - run: npm ci
+      # No dependency needs an install script; skipping them keeps a compromised one from running here.
+      - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm run build
         env:

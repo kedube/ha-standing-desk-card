@@ -71,6 +71,8 @@ export class DeskScene {
   readonly canvas: HTMLCanvasElement;
   /** Called after each rendered frame with the height currently drawn. */
   onFrame?: (heightCm: number) => void;
+  /** Called when the browser takes the WebGL context away (true) and gives it back (false). */
+  onContextChange?: (lost: boolean) => void;
 
   private readonly renderer: WebGLRenderer;
   private readonly scene = new Scene();
@@ -347,6 +349,7 @@ export class DeskScene {
     this.contextLost = true;
     cancelAnimationFrame(this.frame);
     this.frame = 0;
+    this.onContextChange?.(true);
   };
 
   private buildEnvironment(): WebGLRenderTarget {
@@ -367,5 +370,6 @@ export class DeskScene {
     const settings = this.settings;
     this.modelKey = '';
     if (settings) this.configure(settings);
+    this.onContextChange?.(false);
   };
 }

@@ -53,6 +53,21 @@ export function parseLength(value: number | string | undefined, fallbackCm: numb
   }
 }
 
+/**
+ * Reads an on/off option. The raw config editor parses YAML 1.2, where `no` and `off` are
+ * strings, so a plain truthiness or `!== false` check would read them as on.
+ */
+export function parseFlag(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const text = value.trim().toLowerCase();
+    if (['true', 'yes', 'on', '1'].includes(text)) return true;
+    if (['false', 'no', 'off', '0'].includes(text)) return false;
+  }
+  return fallback;
+}
+
 /** Snap step for picking a target height: half an inch, or one centimetre. */
 export const snapStep = (unit: Unit): number => (unit === 'in' ? 0.5 : 1);
 

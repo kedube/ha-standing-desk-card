@@ -5,11 +5,10 @@ import { KeypadController } from './keypad-controller';
 import type { Direction } from './keypad-controller';
 import { StandingDeskKeypad } from './keypad-element';
 import { StandingDeskCardEditor } from './editor';
-import { scaleTicks, spreadMarkers } from './scale';
+import { heightRange, scaleTicks, spreadMarkers } from './scale';
 import { DeskScene } from './scene/desk-scene';
 import type { ModelSettings } from './scene/desk-model';
 import { resolveDesktop, resolveFrame } from './scene/materials';
-import { V2 } from './scene/layout';
 import { PRESET_NUMBERS } from './types';
 import type { EntityMap, EntityRole, HomeAssistant, StandingDeskCardConfig, Unit } from './types';
 import {
@@ -18,6 +17,7 @@ import {
   formatHeight,
   fromUnit,
   keypadText,
+  parseFlag,
   parseLength,
   resolveUnit,
   snapHeight,
@@ -30,11 +30,9 @@ const VERSION = __CARD_VERSION__;
 export const CARD_TYPE = 'standing-desk-card';
 const EDITOR_TYPE = 'standing-desk-card-editor';
 const KEYPAD_TYPE = 'standing-desk-keypad';
-
-/** Defaults when the controller's Min/Max Height entities aren't available: the V2's range with a 1″ top. */
-const FALLBACK_MIN = V2.frameMin + CM_PER_IN;
-const FALLBACK_MAX = V2.frameMax + CM_PER_IN;
 const SCALE_WIDTH = 70;
+/** How long the target outline waits for the desk to start moving. */
+const PENDING_RECHECK_MS = 8_500;
 
 interface DeskState {
   available: boolean;
@@ -60,6 +58,7 @@ export class StandingDeskCard extends LitElement {
     _dragTarget: { state: true },
     _pendingTarget: { state: true },
     _webglFailed: { state: true },
+    _contextLost: { state: true },
     _layoutVersion: { state: true },
   };
 
@@ -69,10 +68,13 @@ export class StandingDeskCard extends LitElement {
   declare _dragTarget?: number;
   declare _pendingTarget?: number;
   declare _webglFailed: boolean;
+  declare _contextLost: boolean;
   declare _layoutVersion: number;
 
   private scene?: DeskScene;
   private resizeObserver?: ResizeObserver;
+  /** Height of the 3D view in CSS px, as last reported by the ResizeObserver. */
+  private glHeight = 0;
   private readonly keypad: KeypadController;
   private entityCache?: { registry: unknown; states: unknown; config: unknown; entities: EntityMap };
   private pendingSince = 0;
@@ -86,6 +88,7 @@ export class StandingDeskCard extends LitElement {
   constructor() {
     super();
     this._webglFailed = false;
+    this._contextLost = false;
     this._layoutVersion = 0;
     this.keypad = new KeypadController(
       {
@@ -102,7 +105,9 @@ export class StandingDeskCard extends LitElement {
           const height = this.deskState().presets[preset - 1];
           if (Number.isFinite(height)) this.setPending(height);
         },
-        savePreset: (preset) => this.press(`save_preset_${preset}` as EntityRole),
+        // Take "S-n" off the display if the save never happened.
+        savePreset: (preset) =>
+          this.press(`save_preset_${preset}` as EntityRole, () => this.keypad.dismiss(`S-${preset}`)),
       },
       {},
       () => this.requestUpdate(),
@@ -118,10 +123,24 @@ export class StandingDeskCard extends LitElement {
     if (!Number.isInteger(presets) || presets < 2 || presets > 4) {
       throw new Error('presets must be 2, 3 or 4');
     }
-    this._config = { ...config, presets };
+    for (const key of ['desktop_color', 'frame_color'] as const) {
+      const value: unknown = config[key];
+      // An unquoted `desktop_color: #2f5d50` is a YAML comment, which leaves null; 202020 is a number.
+      if (value !== undefined && typeof value !== 'string') {
+        throw new Error(`${key} must be a color name or a hex color in quotes, such as ${key}: "#2f5d50"`);
+      }
+    }
+    const allowSave = parseFlag(config.allow_preset_save, true);
+    this._config = {
+      ...config,
+      presets,
+      show_scale: parseFlag(config.show_scale, true),
+      show_idle: parseFlag(config.show_idle, false),
+      allow_preset_save: allowSave,
+    };
     this.keypad.options = {
       ...this.keypad.options,
-      allowSave: config.allow_preset_save !== false,
+      allowSave,
       repeatMs: clamp(Number(config.hold_repeat_ms) || 250, 100, 1000),
     };
   }
@@ -198,22 +217,21 @@ export class StandingDeskCard extends LitElement {
     if (!Number.isFinite(height)) height = heightOf('height_sensor');
     const available = !!heightEntity && heightEntity.state !== 'unavailable' && Number.isFinite(height);
     const status = stateOf('status')?.state ?? '';
+    const statusKey = status.trim().toLowerCase();
 
-    let min = heightOf('min_height');
-    let max = heightOf('max_height');
     const attributes = stateOf('height')?.attributes ?? {};
-    if (!Number.isFinite(min)) min = fromUnit(Number(attributes.min), source);
-    if (!Number.isFinite(max)) max = fromUnit(Number(attributes.max), source);
-    if (!Number.isFinite(min) || !Number.isFinite(max) || max - min < 5) {
-      min = FALLBACK_MIN;
-      max = FALLBACK_MAX;
-    }
+    const { min, max } = heightRange(
+      heightOf('min_height'),
+      heightOf('max_height'),
+      fromUnit(Number(attributes.min ?? NaN), source),
+      fromUnit(Number(attributes.max ?? NaN), source),
+    );
 
     return {
       available,
       height,
       status,
-      moving: status === 'Raising' || status === 'Lowering',
+      moving: statusKey === 'raising' || statusKey === 'lowering',
       presets: PRESET_NUMBERS.slice(0, this.presetCount).map((n) => {
         const value = heightOf(`preset_${n}_height`);
         return value > 0 ? value : NaN;
@@ -252,7 +270,7 @@ export class StandingDeskCard extends LitElement {
     const themes = this.hass?.themes;
     if (this.accent.themes !== themes) {
       const value = getComputedStyle(this).getPropertyValue('--primary-color').trim();
-      this.accent = { themes, color: /^#[0-9a-f]{6}$/i.test(value) || /^rgb/i.test(value) ? value : '#03a9f4' };
+      this.accent = { themes, color: cssColor(value) ?? '#03a9f4' };
     }
     return this.accent.color;
   }
@@ -262,6 +280,9 @@ export class StandingDeskCard extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     document.addEventListener('visibilitychange', this.onVisibilityChange);
+    window.addEventListener('blur', this.releaseHolds);
+    // Disconnecting cancelled the outline's check; without it the outline could stay up forever.
+    if (this._pendingTarget !== undefined) this.armPendingTimer();
     // The scene is released on disconnect; draw again when Home Assistant re-attaches the card.
     if (this.hasUpdated) this.requestUpdate();
   }
@@ -269,6 +290,7 @@ export class StandingDeskCard extends LitElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    window.removeEventListener('blur', this.releaseHolds);
     this.keypad.releaseDirection();
     this.keypad.dispose();
     clearTimeout(this.pendingTimer);
@@ -276,6 +298,7 @@ export class StandingDeskCard extends LitElement {
     this.resizeObserver = undefined;
     this.scene?.dispose();
     this.scene = undefined;
+    this._contextLost = false;
   }
 
   protected override shouldUpdate(changed: PropertyValues): boolean {
@@ -329,6 +352,7 @@ export class StandingDeskCard extends LitElement {
         return false;
       }
       this.scene.onFrame = (height) => this.positionMarker(height);
+      this.scene.onContextChange = (lost) => (this._contextLost = lost);
       created = true;
     }
     if (this.scene.canvas.parentElement === host) return created;
@@ -337,29 +361,35 @@ export class StandingDeskCard extends LitElement {
     this.resizeObserver = new ResizeObserver((entries) => {
       const box = entries[0]?.contentRect;
       if (!box || !this.scene) return;
-      this.scene.setSize(Math.round(box.width), Math.round(box.height));
+      this.glHeight = Math.round(box.height);
+      this.scene.setSize(Math.round(box.width), this.glHeight);
       this._layoutVersion++;
     });
     this.resizeObserver.observe(host);
     return created;
   }
 
+  /** Ends a ▲/▼ hold whose release may never arrive: the page was hidden or lost focus. */
+  private readonly releaseHolds = (): void => {
+    this.renderRoot.querySelector<StandingDeskKeypad>(KEYPAD_TYPE)?.releaseAll();
+    this.keypad.releaseDirection();
+  };
+
   private readonly onVisibilityChange = (): void => {
-    if (document.hidden) {
-      this.renderRoot.querySelector<StandingDeskKeypad>(KEYPAD_TYPE)?.releaseAll();
-      this.keypad.releaseDirection();
-    }
+    if (document.hidden) this.releaseHolds();
   };
 
   // --- Actions ---------------------------------------------------------------------------------
 
-  private press(role: EntityRole): void {
+  /** Presses the button entity for a role. `onFail` runs if there is no such entity or the call fails. */
+  private press(role: EntityRole, onFail?: () => void): void {
     const entityId = this.entities[role];
     if (!entityId) {
       this.notify(`Standing desk: no entity found for ${role.replace(/_/g, ' ')}`);
+      onFail?.();
       return;
     }
-    this.call('button', 'press', { entity_id: entityId });
+    this.call('button', 'press', { entity_id: entityId }, onFail);
   }
 
   private moveTo(heightCm: number): void {
@@ -370,8 +400,9 @@ export class StandingDeskCard extends LitElement {
     this.setPending(fromUnit(value, this.sourceUnit));
   }
 
-  private call(domain: string, service: string, data: Record<string, unknown>): void {
+  private call(domain: string, service: string, data: Record<string, unknown>, onFail?: () => void): void {
     this.hass?.callService(domain, service, data).catch((error: unknown) => {
+      onFail?.();
       const message = error instanceof Error ? error.message : (error as { message?: string })?.message ?? String(error);
       this.notify(`Standing desk: ${message}`);
     });
@@ -386,8 +417,13 @@ export class StandingDeskCard extends LitElement {
     this._pendingTarget = heightCm;
     this.pendingSince = Date.now();
     this.pendingSawMovement = false;
+    this.armPendingTimer();
+  }
+
+  /** Re-checks the outline after a while even if no state update arrives (it never started). */
+  private armPendingTimer(): void {
     clearTimeout(this.pendingTimer);
-    this.pendingTimer = setTimeout(() => this.requestUpdate(), 8_500);
+    this.pendingTimer = setTimeout(() => this.requestUpdate(), PENDING_RECHECK_MS);
   }
 
   private clearPending(): void {
@@ -493,8 +529,9 @@ export class StandingDeskCard extends LitElement {
       ArrowDown: current - step,
       PageUp: current + step * 5,
       PageDown: current - step * 5,
-      Home: state.max,
-      End: state.min,
+      // As in the ARIA slider pattern: Home is the minimum, End the maximum.
+      Home: state.min,
+      End: state.max,
     };
     if (ev.key in moves) {
       ev.preventDefault();
@@ -557,7 +594,12 @@ export class StandingDeskCard extends LitElement {
           <div class="gl"></div>
           ${this._webglFailed
             ? html`<div class="notice">The 3D view needs WebGL, which this browser has turned off. The keypad still works.</div>`
-            : nothing}
+            : this._contextLost
+              ? html`<div class="notice">
+                  The browser paused the 3D view to free graphics memory. Reload the page if it doesn't come back. The
+                  keypad still works.
+                </div>`
+              : nothing}
           ${!config.name && statusText ? html`<div class="chip">${statusText}</div>` : nothing}
           ${target !== undefined && this.scene
             ? html`<div class="target-pill" style="top: ${this.scene.projectHeight(target).toFixed(1)}px">
@@ -593,7 +635,8 @@ export class StandingDeskCard extends LitElement {
 
   private renderScale(state: DeskState, unit: Unit): TemplateResult {
     const scene = this.scene;
-    const height = this.renderRoot.querySelector<HTMLElement>('.gl')?.clientHeight ?? 0;
+    // From the ResizeObserver: reading clientHeight here would force a layout on every render.
+    const height = this.glHeight;
     const ready = scene && height > 0;
     const ticks: TemplateResult[] = [];
     const markers: TemplateResult[] = [];
@@ -925,6 +968,16 @@ export class StandingDeskCard extends LitElement {
       color: var(--error-color, #db4437);
     }
   `;
+}
+
+/** Any CSS color (hex, rgb(), hsl(), a name …) in a form three.js reads, or undefined if invalid. */
+function cssColor(value: string): string | undefined {
+  if (!value || !CSS.supports('color', value)) return undefined;
+  const ctx = document.createElement('canvas').getContext('2d');
+  if (!ctx) return undefined;
+  ctx.fillStyle = value;
+  // The canvas normalizes to "#rrggbb", or "rgba(r, g, b, a)" for translucent colors.
+  return typeof ctx.fillStyle === 'string' ? ctx.fillStyle : undefined;
 }
 
 function formatIdle(seconds: number): string {

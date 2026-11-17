@@ -119,7 +119,10 @@ export function resolveEntities(hass: HomeAssistant, config: StandingDeskCardCon
   if (!deviceId && !entities.height) entities = discoverFromStates(hass);
 
   for (const [role, entityId] of Object.entries(config.entities ?? {})) {
-    if (typeof entityId === 'string' && entityId && role in ROLE_SPECS) entities[role as EntityRole] = entityId;
+    // hasOwnProperty, not `in`: `in` would accept inherited names such as toString.
+    if (typeof entityId === 'string' && entityId && Object.prototype.hasOwnProperty.call(ROLE_SPECS, role)) {
+      entities[role as EntityRole] = entityId;
+    }
   }
   return { entities, deviceId };
 }

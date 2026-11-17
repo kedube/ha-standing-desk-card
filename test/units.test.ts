@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromUnit, keypadText, parseLength, resolveUnit, snapHeight, toUnit } from '../src/units';
+import { fromUnit, keypadText, parseFlag, parseLength, resolveUnit, snapHeight, toUnit } from '../src/units';
 import type { HomeAssistant } from '../src/types';
 
 const hassWithLength = (length: string) => ({ config: { unit_system: { length } } }) as unknown as HomeAssistant;
@@ -43,5 +43,15 @@ describe('units', () => {
     expect(toUnit(snapHeight(fromUnit(30.3, 'in'), 'in'), 'in')).toBeCloseTo(30.5);
     expect(toUnit(snapHeight(fromUnit(30.2, 'in'), 'in'), 'in')).toBeCloseTo(30);
     expect(snapHeight(74.6, 'cm')).toBe(75);
+  });
+
+  it('reads on/off options, including YAML 1.2 strings such as no and off', () => {
+    expect(parseFlag('no', true)).toBe(false);
+    expect(parseFlag(' Off ', true)).toBe(false);
+    expect(parseFlag('yes', false)).toBe(true);
+    expect(parseFlag(false, true)).toBe(false);
+    expect(parseFlag(0, true)).toBe(false);
+    expect(parseFlag(undefined, true)).toBe(true);
+    expect(parseFlag('maybe', false)).toBe(false);
   });
 });
